@@ -1,13 +1,18 @@
 const Car = require('../Models/carModel');
 const User = require('../Models/userModel');  // Assuming you have a User model for user validation
 
-// Create a new car
 const addCar = async (req, res) => {
   try {
     // Log the authenticated user
-    console.log('Authenticated User:', req.user); 
+    console.log('Authenticated User:', req.user);
 
+    // Destructure the required fields from the request body
     const { title, description, tags } = req.body;
+
+    // Check if all required fields are present
+    if (!title || !description || !tags) {
+      return res.status(400).json({ message: 'Title, description, and tags are required' });
+    }
 
     // Ensure at least one image is uploaded
     if (!req.files || req.files.length === 0) {
@@ -16,6 +21,22 @@ const addCar = async (req, res) => {
 
     // Map the uploaded files to their paths
     const imagePaths = req.files.map((file) => file.path);
+
+    // Ensure tags is an array (it could already be an array, based on frontend)
+    let tagsArray;
+
+    if (Array.isArray(tags)) {
+      tagsArray = tags; // If tags are already an array
+    } else {
+      // Check if tags is a string that looks like a JSON array
+      try {
+        // If tags is a valid JSON string representation of an array, parse it
+        tagsArray = JSON.parse(tags);
+      } catch (error) {
+        // If JSON parsing fails, split by comma and trim extra spaces
+        tagsArray = tags.split(',').map((tag) => tag.trim());
+      }
+    }
 
     // Check if the user is authenticated
     if (!req.user) {
@@ -28,7 +49,7 @@ const addCar = async (req, res) => {
       title,
       description,
       images: imagePaths, // Save image paths to MongoDB
-      tags: tags.split(',').map((tag) => tag.trim()), // Split tags into an array
+      tags: tagsArray, // Use the array of tags
     });
 
     // Save the car to the database
@@ -40,6 +61,7 @@ const addCar = async (req, res) => {
     res.status(500).json({ message: 'Error adding car' });
   }
 };
+
 
 // Get all cars created by the authenticated user
 const getAllCars = async (req, res) => {
